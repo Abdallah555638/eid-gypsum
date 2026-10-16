@@ -3,8 +3,9 @@
 
 import {
   useEffect,
-  useRef,
   useState,
+  useRef,
+  type FormEvent,
   type ReactNode,
 } from "react";
 
@@ -31,6 +32,7 @@ function Icon({
     case "arrow":
       content = <path d="M7 17 17 7M7 7h10v10" />;
       break;
+
     case "chat":
       content = (
         <>
@@ -39,6 +41,7 @@ function Icon({
         </>
       );
       break;
+
     case "ceiling":
       content = (
         <>
@@ -47,6 +50,7 @@ function Icon({
         </>
       );
       break;
+
     case "wall":
       content = (
         <>
@@ -55,6 +59,7 @@ function Icon({
         </>
       );
       break;
+
     case "light":
       content = (
         <>
@@ -63,6 +68,7 @@ function Icon({
         </>
       );
       break;
+
     case "partition":
       content = (
         <>
@@ -71,6 +77,7 @@ function Icon({
         </>
       );
       break;
+
     case "sparkle":
       content = (
         <>
@@ -79,6 +86,7 @@ function Icon({
         </>
       );
       break;
+
     case "check":
       content = <path d="m5 12 4 4L19 6" />;
       break;
@@ -101,40 +109,49 @@ function Icon({
   );
 }
 
-// WhatsApp number without "+" or the local leading zero.
+// رقم واتساب بصيغة دولية: بدون + أو الصفر المحلي الأول.
 const WHATSAPP_NUMBER = "201016729062";
 
 function getWhatsAppLink(message: string) {
   return `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(message)}`;
 }
 
-// Put your actual project photos in public/images with these names.
-// You can add or remove projects from this array.
 const projects = [
   {
-    title: "مشروع جبس بورد 01",
+    title: "تصميمات أسقف عصرية",
     category: "أسقف جبس بورد",
-    image: "/images/project-01.jpg",
+    image: "/assets/image%20%281%29.jpg",
   },
   {
-    title: "مشروع تشطيبات 02",
+    title: "تفاصيل داخلية أنيقة",
     category: "تشطيبات داخلية",
-    image: "/images/project-02.jpg",
+    image: "/assets/image%20%282%29.jpg",
   },
+  
   {
-    title: "مشروع ديكورات 03",
-    category: "ديكورات داخلية",
-    image: "/images/project-03.jpg",
-  },
-  {
-    title: "مشروع جبس بورد 04",
+    title: "تصميمات أسقف عصرية",
     category: "أسقف وديكورات",
-    image: "/images/project-04.jpg",
+    image: "/assets/image%20%284%29.jpg",
   },
   {
-    title: "مشروع تشطيبات 05",
+    title: "تفاصيل داخلية أنيقة",
     category: "تشطيبات داخلية",
-    image: "/images/project-05.jpg",
+    image: "/assets/image%20%285%29.jpg",
+  },
+  {
+    title: "تصميم متكامل للمساحة",
+    category: "أسقف جبس بورد",
+    image: "/assets/image%20%286%29.jpg",
+  },
+  {
+    title: "تصميمات أسقف عصرية",
+    category: "ديكورات داخلية",
+    image: "/assets/image%20%287%29.jpg",
+  },
+  {
+    title: "تصميمات أسقف عصرية",
+    category: "تشطيبات داخلية",
+    image: "/assets/image%20%288%29.jpg",
   },
 ];
 
@@ -201,11 +218,27 @@ export default function Home() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [openFaq, setOpenFaq] = useState<number | null>(0);
   const [isScrolled, setIsScrolled] = useState(false);
+  const projectsTrackRef = useRef<HTMLDivElement>(null);
 
-  const projectsSliderRef = useRef<HTMLDivElement>(null);
+  // تحريك سلايدر الأعمال بمقدار كارت واحد في كل مرة.
+  const scrollProjects = (direction: "next" | "prev") => {
+    const track = projectsTrackRef.current;
+    if (!track) return;
+
+    const card = track.querySelector<HTMLElement>(".project-card");
+    const styles = window.getComputedStyle(track);
+    const gap = Number.parseFloat(styles.columnGap || styles.gap || "24") || 24;
+    const distance = (card?.getBoundingClientRect().width || track.clientWidth) + gap;
+
+    // لأن اتجاه الصفحة عربي (RTL)، السهم التالي يتحرك ناحية اليسار.
+    track.scrollBy({
+      left: direction === "next" ? -distance : distance,
+      behavior: "smooth",
+    });
+  };
 
   const generalMessage =
-    "أهلًا Eid Gypsum، محتاج استفسر عن خدمات الجبس بورد والتشطيبات.";
+    "أهلًا Eid Gypsum، محتاج أستفسر عن خدمات الجبس بورد والتشطيبات.";
 
   const navItems = [
     { href: "#services", label: "خدماتنا" },
@@ -214,27 +247,53 @@ export default function Home() {
     { href: "#faq", label: "الأسئلة الشائعة" },
   ];
 
-  // Move the slider one card at a time.
-  const scrollProjects = (direction: -1 | 1) => {
-    const viewport = projectsSliderRef.current;
-    if (!viewport) return;
+  // تجهيز بيانات الفورم في رسالة واتساب.
+  const handleLeadSubmit = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
 
-    const card = viewport.querySelector<HTMLElement>(".project-card");
-    const track = viewport.querySelector<HTMLElement>(".projects-track");
+    const form = event.currentTarget;
+    const formData = new FormData(form);
 
-    if (!card) return;
+    const name = String(formData.get("name") || "").trim();
+    const phone = String(formData.get("phone") || "").trim();
+    const projectType = String(
+      formData.get("projectType") || ""
+    ).trim();
+    const location = String(
+      formData.get("location") || ""
+    ).trim();
+    const area = String(formData.get("area") || "").trim();
+    const details = String(
+      formData.get("details") || ""
+    ).trim();
 
-    const gap = track
-      ? parseFloat(getComputedStyle(track).columnGap) || 0
-      : 0;
+    const message = [
+      "أهلًا Eid Gypsum، عايز أستفسر عن تنفيذ مشروع.",
+      "",
+      `الاسم: ${name}`,
+      `رقم الموبايل: ${phone}`,
+      `نوع المشروع: ${projectType}`,
+      location ? `المنطقة: ${location}` : "",
+      area ? `المساحة التقريبية: ${area}` : "",
+      details ? `تفاصيل المشروع: ${details}` : "",
+    ]
+      .filter(Boolean)
+      .join("\n");
 
-    viewport.scrollBy({
-      left: direction * (card.getBoundingClientRect().width + gap),
-      behavior: "smooth",
-    });
+    const whatsappUrl = getWhatsAppLink(message);
+    const newWindow = window.open(
+      whatsappUrl,
+      "_blank",
+      "noopener,noreferrer"
+    );
+
+    // بديل لو المتصفح منع فتح نافذة جديدة.
+    if (!newWindow) {
+      window.location.href = whatsappUrl;
+    }
   };
 
-  // Reveal elements when they enter the viewport.
+  // إظهار أقسام الصفحة تدريجيًا أثناء النزول.
   useEffect(() => {
     const elements = document.querySelectorAll<HTMLElement>(
       [
@@ -246,6 +305,8 @@ export default function Home() {
         ".process-step",
         ".faq-intro",
         ".faq-item",
+        ".lead-form-copy",
+        ".lead-form",
         ".final-cta .section-kicker",
         ".final-cta h2",
         ".final-cta > p",
@@ -255,7 +316,7 @@ export default function Home() {
 
     elements.forEach((element, index) => {
       element.classList.add("reveal");
-      element.style.transitionDelay = `${(index % 4) * 90}ms`;
+      element.style.transitionDelay = `${(index % 4) * 70}ms`;
     });
 
     if (!("IntersectionObserver" in window)) {
@@ -275,8 +336,8 @@ export default function Home() {
         });
       },
       {
-        threshold: 0.12,
-        rootMargin: "0px 0px -30px 0px",
+        threshold: 0.1,
+        rootMargin: "0px 0px -25px 0px",
       }
     );
 
@@ -285,7 +346,7 @@ export default function Home() {
     return () => observer.disconnect();
   }, []);
 
-  // Navbar background and reading progress while scrolling.
+  // شريط تقدم القراءة وتغيير شكل الـ Navbar أثناء التمرير.
   useEffect(() => {
     const handleScroll = () => {
       const scrollTop = window.scrollY;
@@ -305,7 +366,9 @@ export default function Home() {
 
     handleScroll();
 
-    window.addEventListener("scroll", handleScroll, { passive: true });
+    window.addEventListener("scroll", handleScroll, {
+      passive: true,
+    });
     window.addEventListener("resize", handleScroll);
 
     return () => {
@@ -318,12 +381,13 @@ export default function Home() {
     <main id="home">
       <div className="scroll-progress" aria-hidden="true" />
 
+      {/* Announcement */}
       <div className="announcement">
         <span className="announcement-dot" />
         <span>كل تفصيلة بتفرق في شكل المكان</span>
       </div>
 
-      {/* NAVBAR */}
+      {/* Navbar */}
       <header
         className={`navbar ${isScrolled ? "navbar-scrolled" : ""}`}
       >
@@ -337,12 +401,6 @@ export default function Home() {
             src="/images/eid-gypsum-logo.png-removebg-preview.png"
             alt="Eid Gypsum"
             className="brand-logo"
-            style={{
-              width: "clamp(125px, 14vw, 165px)",
-              height: "48px",
-              objectFit: "contain",
-              display: "block",
-            }}
           />
         </a>
 
@@ -359,21 +417,15 @@ export default function Home() {
 
           <a
             className="mobile-nav-cta"
-            href={getWhatsAppLink(generalMessage)}
-            target="_blank"
-            rel="noopener noreferrer"
+            href="#contact-form"
+            onClick={() => setMenuOpen(false)}
           >
-            تواصل معنا
+            اطلب عرض سعر
           </a>
         </nav>
 
-        <a
-          className="nav-cta"
-          href={getWhatsAppLink(generalMessage)}
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <span>اطلب استفسارك</span>
+        <a className="nav-cta" href="#contact-form">
+          <span>اطلب عرض سعر</span>
           <Icon name="arrow" size={17} />
         </a>
 
@@ -388,7 +440,7 @@ export default function Home() {
         </button>
       </header>
 
-      {/* HERO */}
+      {/* Hero */}
       <section className="hero section-wrap">
         <div className="hero-copy">
           <div className="eyebrow">
@@ -434,6 +486,7 @@ export default function Home() {
               </span>
               <span>اهتمام بالتفاصيل</span>
             </div>
+
             <div>
               <span className="point-icon">
                 <Icon name="check" size={16} />
@@ -477,11 +530,11 @@ export default function Home() {
         </div>
       </section>
 
-      {/* TRUST */}
+      {/* Trust */}
       <section className="trust-strip">
         <div className="trust-inner">
           <div className="trust-heading">
-            <span>01 / EID GYPSUM</span>
+            <span>EID GYPSUM</span>
             <strong>مساحتك تستحق اهتمامًا بالتفاصيل.</strong>
           </div>
 
@@ -511,11 +564,11 @@ export default function Home() {
         </div>
       </section>
 
-      {/* SERVICES */}
+      {/* Services */}
       <section className="services section-wrap" id="services">
         <div className="section-heading">
           <div>
-            <span className="section-kicker">WHAT WE DO / 02</span>
+            <span className="section-kicker">WHAT WE DO</span>
             <h2>
               حلول متكاملة،
               <br />
@@ -559,12 +612,12 @@ export default function Home() {
         </div>
       </section>
 
-      {/* PROJECTS SLIDER */}
+      {/* Projects carousel */}
       <section className="projects-section" id="projects">
         <div className="section-wrap">
           <div className="section-heading projects-heading">
             <div>
-              <span className="section-kicker">SELECTED SPACES / 03</span>
+              <span className="section-kicker">SELECTED SPACES</span>
               <h2>
                 شوف التفاصيل،
                 <br />
@@ -574,109 +627,93 @@ export default function Home() {
 
             <div className="projects-heading-side">
               <p>
-                مجموعة من مشاريع الجبس بورد والتشطيبات الداخلية.
-                اسحب الصور لاكتشاف المزيد، وتواصل معنا لو عندك فكرة مشابهة.
+                شوف أفكار متنوعة للتصميم والتشطيبات، واختار الستايل
+                الأقرب لتصورك قبل ما تناقش تفاصيل مشروعك.
               </p>
 
               <a
                 className="text-link"
-                href={getWhatsAppLink(
-                  "أهلًا Eid Gypsum، حابب أناقش فكرة مشروعي وأعرف تفاصيل التنفيذ."
-                )}
-                target="_blank"
-                rel="noopener noreferrer"
+                href="#contact-form"
               >
-                ناقش فكرتك معانا <Icon name="arrow" size={17} />
+                ناقش مشروعك معانا <Icon name="arrow" size={17} />
               </a>
             </div>
           </div>
 
-          <div className="projects-carousel-controls">
-            <p className="carousel-hint">
-              اسحب الصور لاستكشاف أعمالنا
-            </p>
-
-            <div className="carousel-buttons">
-              <button
-                className="carousel-button"
-                type="button"
-                onClick={() => scrollProjects(-1)}
-                aria-label="المشروع السابق"
-                title="المشروع السابق"
-              >
-                ←
-              </button>
-
-              <button
-                className="carousel-button"
-                type="button"
-                onClick={() => scrollProjects(1)}
-                aria-label="المشروع التالي"
-                title="المشروع التالي"
-              >
-                →
-              </button>
+          <div className="projects-carousel">
+            <div className="projects-carousel-toolbar">
+              <span>اسحب أو استخدم الأسهم لمشاهدة باقي الأعمال</span>
+              <div className="projects-carousel-buttons">
+                <button
+                  className="projects-carousel-button"
+                  type="button"
+                  onClick={() => scrollProjects("prev")}
+                  aria-label="عرض الأعمال السابقة"
+                >
+                  <span aria-hidden="true">→</span>
+                </button>
+                <button
+                  className="projects-carousel-button"
+                  type="button"
+                  onClick={() => scrollProjects("next")}
+                  aria-label="عرض الأعمال التالية"
+                >
+                  <span aria-hidden="true">←</span>
+                </button>
+              </div>
             </div>
-          </div>
 
-          <div
-            className="projects-viewport"
-            dir="ltr"
-            ref={projectsSliderRef}
-          >
-            <div className="projects-track">
-              {projects.map((project, index) => (
-                <article className="project-card" key={project.image}>
-                  <a
-                    className="project-image-wrap"
-                    href={getWhatsAppLink(
-                      `أهلًا Eid Gypsum، مهتم بمشروع ${project.title} وعايز أستفسر عن تنفيذ تصميم مشابه.`
-                    )}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    aria-label={`استفسر عن ${project.title}`}
-                  >
-                    <img
-                      src={project.image}
-                      alt={project.title}
-                      loading="lazy"
-                    />
+            <div className="projects-carousel-track" ref={projectsTrackRef}>
+            {projects.map((project, index) => (
+              <article className="project-card" key={`${project.image}-${index}`}>
 
-                    <span className="project-overlay">
-                      <span className="project-open">
-                        <Icon name="arrow" size={22} />
-                      </span>
+                <a
+                  className="project-image-wrap"
+                  href={getWhatsAppLink(
+                    `أهلًا Eid Gypsum، مهتم بفكرة ${project.title} وعايز أستفسر عن تنفيذ تصميم مشابه.`
+                  )}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  aria-label={`استفسر عن ${project.title}`}
+                >
+                  <img
+                    src={project.image}
+                    alt={project.title}
+                    loading="lazy"
+                  />
+
+                  <span className="project-overlay">
+                    <span className="project-open">
+                      <Icon name="arrow" size={22} />
                     </span>
+                  </span>
 
-                    <span className="project-index">
-                      {String(index + 1).padStart(2, "0")} /{" "}
-                      {String(projects.length).padStart(2, "0")}
-                    </span>
-                  </a>
+                  <span className="project-index">
+                    {String(index + 1).padStart(2, "0")} /{" "}
+                    {String(projects.length).padStart(2, "0")}
+                  </span>
+                </a>
 
-                  <div className="project-info">
-                    <div>
-                      <span>{project.category}</span>
-                      <h3>{project.title}</h3>
-                    </div>
-                    <Icon name="arrow" size={19} />
+                <div className="project-info">
+                  <div>
+                    <span>{project.category}</span>
+                    <h3>{project.title}</h3>
                   </div>
-                </article>
-              ))}
+                  <Icon name="arrow" size={19} />
+                </div>
+              </article>
+            ))}
             </div>
           </div>
 
-          <p className="image-note">
-            استبدل الصور بأعمال Eid Gypsum الحقيقية قبل النشر.
-          </p>
         </div>
       </section>
 
-      {/* PROCESS */}
+      {/* Process */}
       <section className="process section-wrap" id="process">
         <div className="section-heading">
           <div>
-            <span className="section-kicker">OUR PROCESS / 04</span>
+            <span className="section-kicker">OUR PROCESS </span>
             <h2>
               البداية بسيطة،
               <br />
@@ -718,7 +755,7 @@ export default function Home() {
       <section className="faq-section" id="faq">
         <div className="section-wrap faq-layout">
           <div className="faq-intro">
-            <span className="section-kicker">GOOD TO KNOW / 05</span>
+            <span className="section-kicker">GOOD TO KNOW </span>
             <h2>
               عندك سؤال؟
               <br />
@@ -768,16 +805,162 @@ export default function Home() {
         </div>
       </section>
 
-      {/* FINAL CTA */}
+      {/* Lead form */}
+      <section className="lead-form-section" id="contact-form">
+        <div className="section-wrap lead-form-layout">
+          <div className="lead-form-copy">
+            <span className="section-kicker">
+              START YOUR PROJECT 
+            </span>
+
+            <h2>
+              عندك مشروع في بالك؟
+              <br />
+              <span>احكيلنا عنه.</span>
+            </h2>
+
+            <p>
+              سواء بتجهز شقة أو فيلا أو مساحة تجارية، شاركنا تفاصيل
+              مشروعك عشان نقدر نناقش معاك الخدمة المناسبة والخطوة الجاية.
+            </p>
+
+            <div className="lead-form-benefits">
+              <div>
+                <Icon name="check" size={19} />
+                <span>حدد نوع المشروع واحتياجاتك</span>
+              </div>
+
+              <div>
+                <Icon name="check" size={19} />
+                <span>شاركنا المنطقة والمساحة التقريبية</span>
+              </div>
+
+              <div>
+                <Icon name="chat" size={19} />
+                <span>كمّل التواصل مباشرة على واتساب</span>
+              </div>
+            </div>
+          </div>
+
+          <form className="lead-form" onSubmit={handleLeadSubmit}>
+            <div className="form-heading">
+              <span>PROJECT INQUIRY</span>
+              <h3>تفاصيل مشروعك</h3>
+              <p>
+                املأ البيانات الأساسية، والحقول بعلامة * مطلوبة.
+              </p>
+            </div>
+
+            <div className="form-grid">
+              <label className="form-field">
+                <span>الاسم بالكامل *</span>
+                <input
+                  type="text"
+                  name="name"
+                  placeholder="اكتب اسمك"
+                  autoComplete="name"
+                  maxLength={100}
+                  required
+                />
+              </label>
+
+              <label className="form-field">
+                <span>رقم الموبايل *</span>
+                <input
+                  type="tel"
+                  name="phone"
+                  placeholder="01XXXXXXXXX"
+                  autoComplete="tel"
+                  inputMode="tel"
+                  maxLength={25}
+                  required
+                />
+              </label>
+
+              <label className="form-field">
+                <span>نوع المشروع *</span>
+                <select
+                  name="projectType"
+                  defaultValue=""
+                  required
+                >
+                  <option value="" disabled>
+                    اختار نوع المشروع
+                  </option>
+                  <option value="شقة سكنية">شقة سكنية</option>
+                  <option value="فيلا">فيلا</option>
+                  <option value="محل تجاري">محل تجاري</option>
+                  <option value="مكتب إداري">مكتب إداري</option>
+                  <option value="مشروع آخر">مشروع آخر</option>
+                </select>
+              </label>
+
+              <label className="form-field">
+                <span>المنطقة أو المدينة</span>
+                <input
+                  type="text"
+                  name="location"
+                  placeholder="مثال: القاهرة الجديدة"
+                  autoComplete="address-level2"
+                  maxLength={100}
+                />
+              </label>
+
+              <label className="form-field form-field-full">
+                <span>المساحة التقريبية</span>
+                <select name="area" defaultValue="">
+                  <option value="">
+                    اختار المساحة (اختياري)
+                  </option>
+                  <option value="أقل من 100 متر">
+                    أقل من 100 م²
+                  </option>
+                  <option value="100–200 متر">100–200 م²</option>
+                  <option value="أكثر من 200 متر">
+                    أكثر من 200 م²
+                  </option>
+                  <option value="لسه مش محدد">لسه مش محدد</option>
+                </select>
+              </label>
+
+              <label className="form-field form-field-full">
+                <span>تفاصيل إضافية عن المشروع</span>
+                <textarea
+                  name="details"
+                  rows={4}
+                  maxLength={1000}
+                  placeholder="محتاج أسقف جبس بورد، ديكورات جدارية، أو تشطيبات؟ احكيلنا عن فكرتك..."
+                />
+              </label>
+            </div>
+
+            <button
+              className="button button-gold form-submit"
+              type="submit"
+            >
+              <Icon name="chat" size={19} />
+              <span>إرسال الطلب عبر واتساب</span>
+              <Icon name="arrow" size={17} />
+            </button>
+
+            <p className="form-note">
+              بياناتك هتتجهز في رسالة واتساب، ومش هتتبعت إلا لما تضغط
+              إرسال داخل واتساب.
+            </p>
+          </form>
+        </div>
+      </section>
+
+      {/* Final CTA */}
       <section className="final-cta section-wrap" id="contact">
         <div className="cta-decoration" />
 
         <span className="section-kicker">
-          LET'S START SOMETHING / 06
+          LET'S START SOMETHING
         </span>
 
         <h2>
-          عندك مشروع في بالك؟
+          جاهز تبدأ مشروعك؟
           <br />
           <span>خلينا نبدأ من هنا.</span>
         </h2>
@@ -787,16 +970,8 @@ export default function Home() {
           وابدأ أول خطوة مع Eid Gypsum.
         </p>
 
-        <a
-          className="button button-gold"
-          href={getWhatsAppLink(
-            "أهلًا Eid Gypsum، عندي مشروع وعايز أبدأ مناقشة التفاصيل."
-          )}
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Icon name="chat" size={19} />
-          <span>تواصل معانا على واتساب</span>
+        <a className="button button-gold" href="#contact-form">
+          <span>اطلب عرض سعر</span>
           <Icon name="arrow" size={17} />
         </a>
 
@@ -805,7 +980,7 @@ export default function Home() {
         </span>
       </section>
 
-      {/* FOOTER */}
+      {/* Footer */}
       <footer className="footer">
         <div className="footer-main">
           <a
@@ -817,12 +992,6 @@ export default function Home() {
               src="/images/eid-gypsum-logo.png-removebg-preview.png"
               alt="Eid Gypsum"
               className="brand-logo"
-              style={{
-                width: "clamp(125px, 14vw, 165px)",
-                height: "48px",
-                objectFit: "contain",
-                display: "block",
-              }}
             />
           </a>
 
@@ -849,7 +1018,7 @@ export default function Home() {
         </div>
       </footer>
 
-      {/* FLOATING WHATSAPP */}
+      {/* Floating WhatsApp */}
       <a
         className="floating-whatsapp"
         href={getWhatsAppLink(generalMessage)}
